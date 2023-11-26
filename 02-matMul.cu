@@ -1,4 +1,4 @@
-#include "matrixHelpers.hpp"
+#include "include/matrixHelpers.hpp"
 #include <cuda_runtime.h>
 
 #define ROWS_A 9
@@ -17,10 +17,23 @@ int main() {
     float** A = gen_row_inc_matrix(ROWS_A, COLS_A);
     float** B = gen_row_inc_matrix(COLS_A, ROWS_A);
     float** C;
+    float** d_A, d_B, d_C;
+    size_t matrix_bytes = ROWS_A * sizeof(float*);
+
     print_matrix(A, ROWS_A, COLS_A, "A");
     print_matrix(B, COLS_A, ROWS_A, "B");
 
-    // cudaMemcpyAsync()
+    cudaMalloc((void **) d_A, matrix_bytes);
+    cudaMalloc((void **) d_B, matrix_bytes);
+
+    cudaMemcpyAsync(d_A, A, cudaMemcpyHostToDevice);
+    cudaMemcpyAsync(d_B, B, cudaMemcpyHostToDevice);
+    cudaDeviceSynchronize();
+
+
+
+    cudaFree(d_A);
+    cudaFree(d_B);
 
     return 0;
 }
