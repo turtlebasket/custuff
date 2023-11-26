@@ -16,7 +16,7 @@
  * @param B Input Vector pointer 2
  * @param C Result Vector pointer
  */
-__global__ void vecAdd_A(float* A, float* B, float* C)
+__global__ void vecAdd_threadwise(float* A, float* B, float* C)
 {
     int i = threadIdx.x;
     C[i] = A[i] + B[i];
@@ -29,7 +29,7 @@ __global__ void vecAdd_A(float* A, float* B, float* C)
  * @param B Input Vector pointer 2
  * @param C Result Vector pointer
  */
-__global__ void vecAdd_B(float* A, float* B, float* C)
+__global__ void vecAdd_blockwise(float* A, float* B, float* C)
 {
     int i = blockIdx.x;
     C[i] = A[i] + B[i];
@@ -54,8 +54,8 @@ int main() {
     cudaMemcpy(d_b, &b, vec_bytes, cudaMemcpyHostToDevice);
 
     // run vecAdd kernel with 8 threads
-    vecAdd_A<<<1, VEC_SIZE>>>(d_a, d_b, d_c);
-    vecAdd_B<<<VEC_SIZE, 1>>>(d_a, d_b, d_d);
+    vecAdd_threadwise<<<1, VEC_SIZE>>>(d_a, d_b, d_c);
+    vecAdd_blockwise<<<VEC_SIZE, 1>>>(d_a, d_b, d_d);
 
     // copy result vectors from device memory back to host
     cudaMemcpy(c, d_c, vec_bytes, cudaMemcpyDeviceToHost);
