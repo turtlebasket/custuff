@@ -37,3 +37,7 @@ void print_matrix(float** m, size_t rows, size_t cols, std::string name) {
         std::cout << "\n";
     }
 }
+
+int main() {
+
+}

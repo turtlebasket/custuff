@@ -7,79 +7,48 @@
 #include <iostream>
 #include <cuda_runtime.h>
 
-#define VEC_SIZE 8
+#define VEC_SIZE 102400
+#define THREADS_PER_BLOCK 1024
+#define VEC_BYTES (VEC_SIZE * sizeof(float))
 
-/**
- * @brief Vector addition using 1 block and N threads per block
- * 
- * @param A Input Vector pointer 1
- * @param B Input Vector pointer 2
- * @param C Result Vector pointer
- */
-__global__ void vecAdd_threadwise(float* A, float* B, float* C)
-{
-    int i = threadIdx.x;
-    C[i] = A[i] + B[i];
+__global__ void genIncVector(float *V) {
+    int i = (blockIdx.x * THREADS_PER_BLOCK) + threadIdx.x;
+    V[i] = i + 1;
 }
 
-/**
- * @brief Vector addition using N block and 1 thread per block
- * 
- * @param A Input Vector pointer 1
- * @param B Input Vector pointer 2
- * @param C Result Vector pointer
- */
-__global__ void vecAdd_blockwise(float* A, float* B, float* C)
-{
-    int i = blockIdx.x;
+__global__ void vecAdd(float* A, float* B, float* C) {
+    int i = (blockIdx.x * THREADS_PER_BLOCK) + threadIdx.x;
     C[i] = A[i] + B[i];
 }
 
 int main() {
-    float a[VEC_SIZE] = {1., 2., 3., 4., 5., 6., 7., 8.};
-    float b[VEC_SIZE] = {8., 7., 28., 1., 6., 2., 3., 5.};
-    size_t vec_bytes = VEC_SIZE * sizeof(float);
-    float *c = (float *)malloc(vec_bytes);
-    float *d = (float *)malloc(vec_bytes);
-    float *d_a, *d_b, *d_c, *d_d;
+    float *a = (float *)malloc(VEC_BYTES);
+    float *d_a, *d_b;
 
     // allocate memory on device
-    cudaMalloc((void **) &d_a, vec_bytes);
-    cudaMalloc((void **) &d_b, vec_bytes);
-    cudaMalloc((void **) &d_c, vec_bytes);
-    cudaMalloc((void **) &d_d, vec_bytes);
+    cudaMalloc((void **) &d_a, VEC_BYTES);
+    cudaMalloc((void **) &d_b, VEC_BYTES);
 
-    // copy input vectors from host memory to device
-    cudaMemcpy(d_a, &a, vec_bytes, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_b, &b, vec_bytes, cudaMemcpyHostToDevice);
+    genIncVector<<<VEC_SIZE/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(d_a);
+    genIncVector<<<VEC_SIZE/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(d_b);
 
-    // run vecAdd kernel with 8 threads
-    vecAdd_threadwise<<<1, VEC_SIZE>>>(d_a, d_b, d_c);
-    vecAdd_blockwise<<<VEC_SIZE, 1>>>(d_a, d_b, d_d);
+    // run vecAdd kernel with 8 threads, N_ITERATIONS times
+    // Basic operation: A += B
+    vecAdd<<<VEC_SIZE/THREADS_PER_BLOCK, THREADS_PER_BLOCK>>>(d_a, d_b, d_a);
 
     // copy result vectors from device memory back to host
-    cudaMemcpy(c, d_c, vec_bytes, cudaMemcpyDeviceToHost);
-    cudaMemcpy(d, d_d, vec_bytes, cudaMemcpyDeviceToHost);
+    cudaMemcpy(a, d_a, VEC_BYTES, cudaMemcpyDeviceToHost);
 
     // print result C
-    std::cout << "C: ";
-    for (int i = 0; i < VEC_SIZE; i++) {
-        std::cout << *(c+i) << " ";
-    }
-    std::cout << std::endl;
-
-    // print result D
-    std::cout << "D: ";
-    for (int i = 0; i < VEC_SIZE; i++) {
-        std::cout << *(d+i) << " ";
-    }
-    std::cout << std::endl;
+    // std::cout << "A: ";
+    // for (int i = 0; i < VEC_SIZE; i++) {
+    //     std::cout << *(a+i) << " ";
+    // }
+    // std::cout << std::endl;
 
     // free device memory
     cudaFree(d_a); 
     cudaFree(d_b); 
-    cudaFree(d_c);
-    cudaFree(d_d);
 
     return 0;
 }

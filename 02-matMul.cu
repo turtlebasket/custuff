@@ -1,11 +1,15 @@
-#include "include/matrixHelpers.hpp"
 #include <cuda_runtime.h>
+#include "matrixHelpers.hpp"
 
 #define ROWS_A 9
 #define COLS_A 7
 #define N_THREADS (ROWS_A * ROWS_A)
 
-__global__ void matmul(float** A, float** B, float** C) {
+__global__ void genIncMatrix(float* mat) {
+
+}
+
+__global__ void matmul(float* A, float* B, float* C) {
     int bix = blockIdx.x;
     int tix = threadIdx.x;
 
@@ -29,8 +33,6 @@ int main() {
     cudaMemcpyAsync(d_A, A, cudaMemcpyHostToDevice);
     cudaMemcpyAsync(d_B, B, cudaMemcpyHostToDevice);
     cudaDeviceSynchronize();
-
-
 
     cudaFree(d_A);
     cudaFree(d_B);
